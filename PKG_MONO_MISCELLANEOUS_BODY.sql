@@ -1,11 +1,4 @@
---------------------------------------------------------
---  File created - Tuesday-May-21-2024   
---------------------------------------------------------
---------------------------------------------------------
---  DDL for Package Body PKG_MONO_MISCELLANEOUS
---------------------------------------------------------
-
-  CREATE OR REPLACE EDITIONABLE PACKAGE BODY "DATACORE"."PKG_MONO_MISCELLANEOUS" 
+create or replace PACKAGE BODY          PKG_MONO_MISCELLANEOUS
 IS
     PROCEDURE PRC_GLOBAL_LOGGING (
         in_serviceId      IN     VARCHAR2,
@@ -67,6 +60,7 @@ IS
     
     PROCEDURE PRC_GET_REALTIMEWEATHER (in_lat          IN     NUMBER,
                                        in_lon          IN     NUMBER,
+                                       out_trackingId     OUT VARCHAR2,
                                        out_serviceId      OUT VARCHAR2,
                                        out_res            OUT CLOB,
                                        out_resCode        OUT VARCHAR2,
@@ -84,12 +78,13 @@ IS
         l_notifyFlag         VARCHAR2 (1);
         l_notifyMsg          VARCHAR2 (1024);
         l_loggingPayload     VARCHAR2(1024);
-        l_ip                 VARCHAR2 (20) := '192.168.0.108';
+        l_ip                 VARCHAR2 (20) := '192.168.0.110';
         l_port               VARCHAR2 (4) := '9000';
         l_endPoint           VARCHAR2 (1024) := '/miscellaneous/checkWeatherReport';
         l_url                DATACORE.GLOBAL_LOGGING.OPR_ENDPOINT%TYPE;
         l_logId              DATACORE.GLOBAL_LOGGING.LOG_ID%TYPE;
         l_trackingId         DATACORE.GLOBAL_LOGGING.SERVICE_ID%TYPE;
+        l_json_obj           JSON_OBJECT_T;
     BEGIN
         l_url := l_proto || '://' || l_ip || ':' || l_port || l_endPoint || '?lat=' || in_lat || '&lon=' || in_lon;
         l_trackingId := 'TRK' || TO_CHAR(DATACORE.SEQ_TRACKING_ID.NEXTVAL, 'FM000000');
@@ -136,9 +131,10 @@ IS
 
             IF l_httpCode = 200
             THEN
-                NULL;
-            ELSE
-                NULL;
+                l_json_obj    := JSON_OBJECT_T.parse(out_res);
+                out_resCode   := l_json_obj.get_string('responseCode');
+                out_resMsg    := l_json_obj.get_string('responseMsg');
+                out_serviceId := l_json_obj.get_string('correlationId');
             END IF;
 
 
@@ -157,7 +153,7 @@ IS
                                                                         in_oprName        => 'GET_REALTIMEWEATHER',
                                                                         in_oprEndPoint    => l_url,
                                                                         in_oprReq         => l_loggingPayload,
-                                                                        in_oprRes         => l_httpResp,
+                                                                        in_oprRes         => out_res,
                                                                         in_channelName    => 'RAPID_API',
                                                                         in_requestForm    => 'WEB',
                                                                         in_dbErrMessage   => l_resMsg,
@@ -192,7 +188,7 @@ IS
                                                                 in_oprName        => 'GET_REALTIMEWEATHER',
                                                                 in_oprEndPoint    => l_url,
                                                                 in_oprReq         => l_loggingPayload,
-                                                                in_oprRes         => l_httpResp,
+                                                                in_oprRes         => out_res,
                                                                 in_channelName    => 'RAPID_API',
                                                                 in_requestForm    => 'WEB',
                                                                 in_dbErrMessage   => NULL,
@@ -214,14 +210,14 @@ IS
             RAISE l_runtimeException;
         END IF;
         -- Write Response log END
-        
+    
+        out_trackingId := l_trackingId;
     EXCEPTION
         WHEN l_runtimeException
         THEN
             out_resCode := l_resCode;
             out_resMsg := l_resMsg;
-            out_serviceId := l_trackingId;
+            out_serviceId := l_json_obj.get_string('correlationId');
+            out_trackingId := l_trackingId;
     END PRC_GET_REALTIMEWEATHER;
 END;
-
-/
