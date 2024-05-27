@@ -20,4 +20,13 @@ IS
                                        out_res            OUT CLOB,
                                        out_resCode        OUT VARCHAR2,
                                        out_resMsg         OUT VARCHAR2);
+                                       
+    PROCEDURE PRC_GET_IPLOOKUP (in_ip              IN     VARCHAR2,
+                                in_apiKey          IN     VARCHAR2,
+                                in_apiHost         IN     VARCHAR2,
+                                out_trackingId     OUT VARCHAR2,
+                                out_serviceId      OUT VARCHAR2,
+                                out_res            OUT CLOB,
+                                out_resCode        OUT VARCHAR2,
+                                out_resMsg         OUT VARCHAR2);
 END;
